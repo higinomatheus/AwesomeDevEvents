@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication.OAuth.Claims;
-
-namespace AwesomeDevEvents.API.Entities
+﻿namespace AwesomeDevEvents.API.Entities
 {
     public class DevEvent
     {

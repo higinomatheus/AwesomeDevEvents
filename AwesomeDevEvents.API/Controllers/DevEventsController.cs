@@ -1,4 +1,6 @@
-﻿using AwesomeDevEvents.API.Entities;
+﻿using AutoMapper;
+using AwesomeDevEvents.API.Entities;
+using AwesomeDevEvents.API.Models;
 using AwesomeDevEvents.API.Persistence;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,10 +12,12 @@ namespace AwesomeDevEvents.API.Controllers
     public class DevEventsController : ControllerBase
     {
         private readonly DevEventsDbContext _context;
+        private readonly IMapper _mapper;
 
-        public DevEventsController(DevEventsDbContext context)
+        public DevEventsController(DevEventsDbContext context, IMapper mapper)
         {
-            _context = context;    
+            _context = context;
+            _mapper = mapper;
         }
 
         /// <summary>
@@ -25,11 +29,13 @@ namespace AwesomeDevEvents.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public IActionResult GetAll()
         {
-            var devEvents =_context.DevEvents
+            var devEvents = _context.DevEvents
                 .Where(d => !d.IsDeleted)
                 .Include(d => d.Speakers).ToList();
 
-            return Ok(devEvents);
+            var viewModel = _mapper.Map<List<DevEventViewModel>>(devEvents);
+
+            return Ok(viewModel);
         }
 
         /// <summary>
@@ -48,12 +54,14 @@ namespace AwesomeDevEvents.API.Controllers
                 .Include(d => d.Speakers)
                 .SingleOrDefault(d => d.Id == id);
 
-            if(devEvent == null)
+            if (devEvent == null)
             {
                 return NotFound();
             }
 
-            return Ok(devEvent);
+            var viewModel = _mapper.Map<DevEventViewModel>(devEvent);
+
+            return Ok(viewModel);
         }
 
         /// <summary>
@@ -62,13 +70,15 @@ namespace AwesomeDevEvents.API.Controllers
         /// <remarks>
         /// {   "title": "string",   "description": "string",   "startDate": "2023-12-05T19:28:53.508Z",   "endDate": "2023-12-05T19:28:53.508Z" }
         /// </remarks>
-        /// <param name="devEvent">Dados do evento</param>
+        /// <param name="inputModel">Dados do evento</param>
         /// <returns>Objeto recém criado</returns>
         /// <response code="201">Sucesso</response>
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
-        public IActionResult Post(DevEvent devEvent)
+        public IActionResult Post(DevEventInputModel inputModel)
         {
+            var devEvent = _mapper.Map<DevEvent>(inputModel);
+
             _context.DevEvents.Add(devEvent);
             _context.SaveChanges();
 
@@ -82,23 +92,23 @@ namespace AwesomeDevEvents.API.Controllers
         /// {   "title": "string",   "description": "string",   "startDate": "2023-12-05T19:28:53.508Z",   "endDate": "2023-12-05T19:28:53.508Z" }
         /// </remarks>
         /// <param name="id">Identificador do evento</param>
-        /// <param name="input">Dados do evento</param>
+        /// <param name="inputModel">Dados do evento</param>
         /// <returns>Nada</returns>
         /// <response code="204">Sucesso</response>
         /// <response code="404">Não encontrado</response>
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public IActionResult Update(Guid id, DevEvent input)
+        public IActionResult Update(Guid id, DevEventInputModel inputModel)
         {
             var devEvent = _context.DevEvents.SingleOrDefault(d => d.Id == id);
 
-            if(devEvent == null)
+            if (devEvent == null)
             {
                 return NotFound();
-            } 
+            }
 
-            devEvent.Update(input.Title, input.Description, input.StartDate, input.EndDate);
+            devEvent.Update(inputModel.Title, inputModel.Description, inputModel.StartDate, inputModel.EndDate);
 
             _context.DevEvents.Update(devEvent);
             _context.SaveChanges();
@@ -120,7 +130,7 @@ namespace AwesomeDevEvents.API.Controllers
         {
             var devEvent = _context.DevEvents.SingleOrDefault(d => d.Id == id);
 
-            if(devEvent == null)
+            if (devEvent == null)
             {
                 return NotFound();
             }
@@ -146,13 +156,15 @@ namespace AwesomeDevEvents.API.Controllers
         [HttpPost("{id}/speakers")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public IActionResult PostSpeaker(Guid id, DevEventSpeaker speaker)
+        public IActionResult PostSpeaker(Guid id, DevEventSpeakerInputModel inputModel)
         {
+            var speaker = _mapper.Map<DevEventSpeaker>(inputModel);
+
             speaker.DevEventId = id;
 
             var devEvent = _context.DevEvents.Any(d => d.Id == id);
 
-            if(!devEvent)
+            if (!devEvent)
             {
                 return NotFound();
             }
